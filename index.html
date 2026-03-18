@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HOM — Royalty Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --black: #0a0a0a;
+  --white: #f5f2ec;
+  --cream: #ede9e0;
+  --gold: #c8a96e;
+  --gold-light: #e2c98a;
+  --gray: #6b6560;
+  --gray-light: #b5b0a8;
+  --red: #c94f3a;
+  --green: #3a7c5a;
+  --blue: #4a7fb5;
+  --border: rgba(200,169,110,0.2);
+  --surface: rgba(255,255,255,0.03);
+  --sidebar-w: 240px;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;
+  z-index:1000;
+  opacity:0.3;
+}
+
+/* SIDEBAR */
+.sidebar {
+  position:fixed;
+  left:0;top:0;bottom:0;
+  width:var(--sidebar-w);
+  background:rgba(10,10,10,0.97);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  padding:32px 0;
+  z-index:100;
+}
+
+.sidebar-logo {
+  padding:0 24px 28px;
+  border-bottom:1px solid var(--border);
+  margin-bottom:24px;
+}
+
+.logo-mark {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:4px;
+}
+
+.logo-diamond {
+  width:32px;height:32px;
+  background:var(--gold);
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+}
+
+.logo-text {
+  font-family:'Syne',sans-serif;
+  font-weight:800;
+  font-size:22px;
+  letter-spacing:4px;
+  color:var(--white);
+}
+
+.logo-sub {
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  color:var(--gray);
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  margin-top:4px;
+}
+
+.nav-section {
+  padding:12px 24px 6px;
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:0.2em;
+  text-transform:uppercase;
+  color:var(--gray);
+}
+
+.nav-item {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:11px 24px;
+  cursor:pointer;
+  transition:all 0.2s;
+  font-size:13px;
+  color:var(--gray-light);
+  border-left:2px solid transparent;
+}
+
+.nav-item:hover { color:var(--white); background:var(--surface); }
+
+.nav-item.active {
+  color:var(--gold);
+  border-left-color:var(--gold);
+  background:rgba(200,169,110,0.06);
+}
+
+.nav-icon { font-size:15px; width:20px; text-align:center; }
+
+.nav-badge {
+  margin-left:auto;
+  background:var(--gold);
+  color:var(--black);
+  font-size:10px;
+  font-family:'DM Mono',monospace;
+  padding:2px 7px;
+  border-radius:10px;
+  font-weight:700;
+}
+
+/* MAIN */
+.main {
+  margin-left:var(--sidebar-w);
+  min-height:100vh;
+  padding:40px;
+}
+
+.view { display:none; }
+.view.active { display:block; }
+
+/* PAGE HEADER */
+.page-header {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:36px;
+}
+
+.page-title {
+  font-family:'Syne',sans-serif;
+  font-weight:700;
+  font-size:28px;
+  letter-spacing:-0.02em;
+}
+
+.page-sub {
+  font-size:13px;
+  color:var(--gray);
+  margin-top:4px;
+}
+
+/* CARDS */
+.card {
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:24px;
+  margin-bottom:20px;
+}
+
+.card-title {
+  font-family:'Syne',sans-serif;
+  font-weight:600;
+  font-size:15px;
+  color:var(--gold);
+  margin-bottom:16px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+/* GRID */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+.grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+
+/* FORM */
+.field { margin-bottom:16px; }
+.field label {
+  display:block;
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.15em;
+  text-transform:uppercase;
+  color:var(--gray);
+  margin-bottom:6px;
+}
+
+.field input, .field select, .field textarea {
+  width:100%;
+  background:rgba(255,255,255,0.05);
+  border:1px solid var(--border);
+  border-radius:6px;
+  padding:10px 14px;
+  color:var(--white);
+  font-family:'DM Sans',sans-serif;
+  font-size:13px;
+  outline:none;
+  transition:border-color 0.2s;
+}
+
+.field input:focus, .field select:focus { border-color:var(--gold); }
+.field select option { background:#111; }
+.field input[type="number"] { -moz-appearance:textfield; }
+.field input[type="number"]::-webkit-outer-spin-button,
+.field input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; }
+
+/* BUTTONS */
+.btn {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 20px;
+  border-radius:6px;
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+  border:none;
+  transition:all 0.2s;
+  font-family:'DM Sans',sans-serif;
+}
+
+.btn-primary { background:var(--gold); color:var(--black); }
+.btn-primary:hover { background:var(--gold-light); }
+.btn-outline { background:transparent; color:var(--white); border:1px solid var(--border); }
+.btn-outline:hover { border-color:var(--gold); color:var(--gold); }
+.btn-ghost { background:transparent; color:var(--gray-light); }
+.btn-ghost:hover { color:var(--white); }
+.btn-danger { background:transparent; color:var(--red); border:1px solid rgba(201,79,58,0.3); }
+.btn-danger:hover { background:rgba(201,79,58,0.1); }
+.btn-success { background:var(--green); color:white; }
+.btn-sm { padding:6px 14px; font-size:12px; }
+
+/* TABLE */
+.table-wrap { overflow-x:auto; }
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+
+thead th {
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--gray);
+  padding:10px 12px;
+  text-align:left;
+  border-bottom:1px solid var(--border);
+}
+
+tbody td {
+  padding:12px;
+  border-bottom:1px solid rgba(200,169,110,0.07);
+  color:var(--white);
+}
+
+tbody tr:hover td { background:rgba(255,255,255,0.02); }
+
+.amount-positive { color:#5aab7a; font-family:'DM Mono',monospace; font-weight:600; }
+.amount-negative { color:var(--red); font-family:'DM Mono',monospace; font-weight:600; }
+.amount-neutral { font-family:'DM Mono',monospace; }
+
+/* TAGS */
+.tag {
+  display:inline-block;
+  padding:3px 10px;
+  border-radius:20px;
+  font-size:11px;
+  font-family:'DM Mono',monospace;
+}
+
+.tag-liquidabile { background:rgba(58,124,90,0.2); color:#5aab7a; }
+.tag-negativo { background:rgba(201,79,58,0.15); color:var(--red); }
+.tag-neutro { background:rgba(107,101,96,0.2); color:var(--gray-light); }
+
+/* STAT CARDS */
+.stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+.stat-card {
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:20px;
+}
+.stat-label { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:0.15em; text-transform:uppercase; color:var(--gray); margin-bottom:8px; }
+.stat-value { font-family:'Syne',sans-serif; font-size:28px; font-weight:700; }
+.stat-value.gold { color:var(--gold); }
+.stat-value.green { color:#5aab7a; }
+.stat-value.red { color:var(--red); }
+
+/* UPLOAD ZONE */
+.upload-zone {
+  border:2px dashed var(--border);
+  border-radius:8px;
+  padding:32px;
+  text-align:center;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+.upload-zone:hover { border-color:var(--gold); background:rgba(200,169,110,0.03); }
+.upload-zone.drag { border-color:var(--gold); background:rgba(200,169,110,0.06); }
+
+/* ROYALTY BREAKDOWN */
+.breakdown-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 0;
+  border-bottom:1px solid rgba(200,169,110,0.07);
+}
+.breakdown-label { font-size:13px; color:var(--gray-light); }
+.breakdown-pct { font-family:'DM Mono',monospace; font-size:12px; color:var(--gray); }
+.breakdown-amount { font-family:'DM Mono',monospace; font-size:13px; font-weight:600; }
+
+/* TOAST */
+.toast {
+  position:fixed;
+  bottom:24px;
+  right:24px;
+  background:#1a1a1a;
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:14px 20px;
+  font-size:13px;
+  z-index:999;
+  transform:translateY(80px);
+  opacity:0;
+  transition:all 0.3s;
+}
+.toast.show { transform:translateY(0); opacity:1; }
+.toast.success { border-left:3px solid var(--green); }
+.toast.error { border-left:3px solid var(--red); }
+
+/* MODAL */
+.modal-overlay {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  z-index:500;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.2s;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal {
+  background:#111;
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:32px;
+  width:100%;
+  max-width:720px;
+  max-height:90vh;
+  overflow-y:auto;
+}
+.modal-header {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:24px;
+}
+.modal-title { font-family:'Syne',sans-serif; font-weight:700; font-size:20px; }
+
+/* RENDICONTO PREVIEW */
+.statement-preview {
+  background:#fff;
+  color:#000;
+  padding:48px;
+  font-family:'DM Sans',sans-serif;
+  max-width:794px;
+  margin:0 auto;
+  border-radius:8px;
+}
+
+/* PRINT STYLES */
+@media print {
+  body { background:#fff !important; }
+  .sidebar, .main > *:not(.print-area), .no-print { display:none !important; }
+  .main { margin-left:0 !important; padding:0 !important; }
+  .print-area { display:block !important; }
+  .statement-preview { border-radius:0; box-shadow:none; }
+}
+
+@media (max-width:768px) {
+  .sidebar { width:56px; }
+  .sidebar .nav-item span:not(.nav-icon) { display:none; }
+  .sidebar-logo .logo-text, .sidebar-logo .logo-sub, .logo-diamond { display:none; }
+  .nav-item { justify-content:center; padding:14px; }
+  .nav-section { display:none; }
+  .main { margin-left:56px; padding:20px 16px; }
+  .stats-row { grid-template-columns:repeat(2,1fr); }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns:1fr; }
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">
+      <div class="logo-diamond"></div>
+      <div class="logo-text">HOM</div>
+    </div>
+    <div class="logo-sub">Royalty Manager</div>
+  </div>
+
+  <span class="nav-section">Gestione</span>
+  <div class="nav-item active" onclick="showView('dashboard')">
+    <span class="nav-icon">◈</span>
+    <span>Dashboard</span>
+  </div>
+  <div class="nav-item" onclick="showView('contratti')">
+    <span class="nav-icon">📄</span>
+    <span>Contratti</span>
+    <span class="nav-badge" id="badge-contratti">0</span>
+  </div>
+  <div class="nav-item" onclick="showView('import')">
+    <span class="nav-icon">📊</span>
+    <span>Importa Dati</span>
+  </div>
+  <div class="nav-item" onclick="showView('rendiconti')">
+    <span class="nav-icon">📋</span>
+    <span>Rendiconti</span>
+    <span class="nav-badge" id="badge-rendiconti">0</span>
+  </div>
+
+  <span class="nav-section">Strumenti</span>
+  <div class="nav-item" onclick="showView('nuovo-contratto')">
+    <span class="nav-icon">✦</span>
+    <span>Nuovo Contratto</span>
+  </div>
+  <div class="nav-item" onclick="showView('impostazioni')">
+    <span class="nav-icon">⚙️</span>
+    <span>Impostazioni</span>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- DASHBOARD -->
+<div class="view active" id="view-dashboard">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Dashboard</div>
+      <div class="page-sub">Panoramica royalties House of Music</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-outline" onclick="showView('import')">📊 Importa Excel</button>
+      <button class="btn btn-primary" onclick="showView('nuovo-contratto')">✦ Nuovo Contratto</button>
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-label">Contratti Attivi</div>
+      <div class="stat-value gold" id="dash-contratti">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Totale Maturato</div>
+      <div class="stat-value" id="dash-maturato">€0,00</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Liquidabile (>€100)</div>
+      <div class="stat-value green" id="dash-liquidabile">€0,00</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">In Sospeso</div>
+      <div class="stat-value red" id="dash-sospeso">€0,00</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">◈ Posizioni Artisti</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Artista</th>
+            <th>Progetto</th>
+            <th>Saldo Corrente</th>
+            <th>Stato</th>
+            <th>Ultimo Aggiornamento</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="dash-table">
+          <tr><td colspan="6" style="color:var(--gray);padding:24px;text-align:center;font-style:italic;">Nessun contratto — aggiungine uno per iniziare</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- CONTRATTI -->
+<div class="view" id="view-contratti">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Contratti</div>
+      <div class="page-sub">Gestisci i contratti royalty per artista e progetto</div>
+    </div>
+    <button class="btn btn-primary" onclick="showView('nuovo-contratto')">✦ Nuovo Contratto</button>
+  </div>
+
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Artista</th>
+            <th>Progetto / Album</th>
+            <th>Digitale %</th>
+            <th>Fisico %</th>
+            <th>Sync %</th>
+            <th>Other %</th>
+            <th>Saldo Iniziale</th>
+            <th>Saldo Attuale</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="contratti-table">
+          <tr><td colspan="9" style="color:var(--gray);padding:24px;text-align:center;font-style:italic;">Nessun contratto</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- NUOVO CONTRATTO -->
+<div class="view" id="view-nuovo-contratto">
+  <div class="page-header">
+    <div>
+      <div class="page-title" id="form-title">Nuovo Contratto</div>
+      <div class="page-sub">Configura artista, progetto e percentuali royalty</div>
+    </div>
+    <button class="btn btn-ghost" onclick="showView('contratti')">← Indietro</button>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">👤 Artista & Progetto</div>
+        <div class="field">
+          <label>Nome Artista *</label>
+          <input type="text" id="f-artista" placeholder="Es: Asian Fake, Peroni Dischi...">
+        </div>
+        <div class="field">
+          <label>Titolo Progetto / Album *</label>
+          <input type="text" id="f-progetto" placeholder="Es: Debut Album 2024, EP Spring...">
+        </div>
+        <div class="field">
+          <label>Label HOM</label>
+          <select id="f-label">
+            <option value="">— Seleziona label —</option>
+            <option>Asian Fake</option>
+            <option>FLUIDOSTUDIO</option>
+            <option>Peroni Dischi</option>
+            <option>Stolen Goods</option>
+            <option>Revolutional</option>
+            <option>GenUs</option>
+            <option>HOM Generale</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Data Contratto</label>
+          <input type="date" id="f-data">
+        </div>
+        <div class="field">
+          <label>Note</label>
+          <textarea id="f-note" style="min-height:80px;resize:vertical;" placeholder="Note libere sul contratto..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title">💰 Percentuali Royalty</div>
+        <p style="font-size:12px;color:var(--gray);margin-bottom:16px;">Inserisci la percentuale spettante all'artista per ogni tipologia di ricavo.</p>
+        <div class="grid-2">
+          <div class="field">
+            <label>Digitale (streaming, download) %</label>
+            <input type="number" id="f-pct-digitale" placeholder="0" min="0" max="100" step="0.1">
+          </div>
+          <div class="field">
+            <label>Fisico (CD, vinile, merch) %</label>
+            <input type="number" id="f-pct-fisico" placeholder="0" min="0" max="100" step="0.1">
+          </div>
+          <div class="field">
+            <label>Sync (licensing, TV, film) %</label>
+            <input type="number" id="f-pct-sync" placeholder="0" min="0" max="100" step="0.1">
+          </div>
+          <div class="field">
+            <label>Other (publishing, altro) %</label>
+            <input type="number" id="f-pct-other" placeholder="0" min="0" max="100" step="0.1">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 Saldo Iniziale</div>
+        <p style="font-size:12px;color:var(--gray);margin-bottom:16px;">Importo di partenza: <b style="color:var(--white)">negativo</b> = debito artista (avanzamento da recuperare), <b style="color:var(--white)">positivo</b> = credito già maturato.</p>
+        <div class="field">
+          <label>Importo Fisso (€)</label>
+          <input type="number" id="f-saldo-iniziale" placeholder="0.00" step="0.01">
+        </div>
+        <div class="field">
+          <label>Descrizione Saldo Iniziale</label>
+          <input type="text" id="f-saldo-desc" placeholder="Es: Anticipo contrattuale, Costi produzione...">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button class="btn btn-primary" onclick="salvaContratto()" style="flex:1;justify-content:center;padding:14px;">✦ Salva Contratto</button>
+        <button class="btn btn-outline" onclick="resetForm()">Reset</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORTA DATI -->
+<div class="view" id="view-import">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Importa Dati Distributore</div>
+      <div class="page-sub">Carica l'Excel del distributore per calcolare le royalties</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="card">
+        <div class="card-title">📁 Carica File Excel</div>
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('excel-input').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+          <div style="font-size:32px;margin-bottom:12px;">📊</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:600;font-size:15px;margin-bottom:6px;">Trascina il file Excel o clicca</div>
+          <div style="font-size:12px;color:var(--gray);">.xlsx, .xls, .csv supportati</div>
+        </div>
+        <input type="file" id="excel-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileUpload(this)">
+
+        <div id="file-info" style="display:none;margin-top:16px;padding:12px;background:rgba(200,169,110,0.05);border:1px solid var(--border);border-radius:6px;">
+          <div style="font-size:13px;color:var(--gold);" id="file-name"></div>
+          <div style="font-size:12px;color:var(--gray);margin-top:4px;" id="file-rows"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔧 Mappatura Colonne</div>
+        <p style="font-size:12px;color:var(--gray);margin-bottom:16px;">Indica quale colonna dell'Excel corrisponde ad ogni campo.</p>
+        <div class="field">
+          <label>Colonna Importo Ricavi (ROY pagabili)</label>
+          <input type="text" id="map-importo" placeholder="Es: Royalty Amount, Net Amount, Importo...">
+        </div>
+        <div class="field">
+          <label>Colonna Tipologia Ricavo</label>
+          <input type="text" id="map-tipo" placeholder="Es: Revenue Type, Type, Tipo...">
+        </div>
+        <div class="field">
+          <label>Colonna Artista / Progetto (opzionale)</label>
+          <input type="text" id="map-artista" placeholder="Es: Artist, Artista, Release...">
+        </div>
+        <div class="field">
+          <label>Seleziona Contratto da Aggiornare</label>
+          <select id="map-contratto">
+            <option value="">— Seleziona contratto —</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="elaboraExcel()" style="width:100%;justify-content:center;padding:12px;">⚡ Elabora e Calcola Royalties</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="card-title">👁 Anteprima Dati</div>
+        <div id="preview-container" style="overflow-x:auto;max-height:400px;overflow-y:auto;">
+          <div style="color:var(--gray);font-size:13px;font-style:italic;padding:20px 0;">Carica un file per vedere l'anteprima...</div>
+        </div>
+      </div>
+
+      <div class="card" id="risultato-elaborazione" style="display:none;">
+        <div class="card-title">✅ Risultato Elaborazione</div>
+        <div id="risultato-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RENDICONTI -->
+<div class="view" id="view-rendiconti">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Rendiconti</div>
+      <div class="page-sub">Genera e stampa i rendiconti royalty per gli artisti</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Seleziona Contratto</div>
+    <div class="grid-3" style="margin-bottom:16px;">
+      <div class="field">
+        <label>Contratto</label>
+        <select id="rend-contratto" onchange="aggiornaRendiconto()">
+          <option value="">— Seleziona contratto —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Periodo (es: Q1 2025, Marzo 2025)</label>
+        <input type="text" id="rend-periodo" placeholder="Q1 2025" oninput="aggiornaRendiconto()">
+      </div>
+      <div class="field">
+        <label>Data Rendiconto</label>
+        <input type="date" id="rend-data" oninput="aggiornaRendiconto()">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="stampaRendiconto()">🖨️ Stampa / Salva PDF</button>
+      <button class="btn btn-outline" onclick="salvaRendiconto()">💾 Salva Rendiconto</button>
+    </div>
+  </div>
+
+  <!-- PREVIEW RENDICONTO -->
+  <div id="rend-preview" style="display:none;">
+    <div class="statement-preview" id="statement-content">
+      <!-- generato dinamicamente -->
+    </div>
+  </div>
+
+  <!-- STORICO RENDICONTI -->
+  <div class="card" style="margin-top:24px;">
+    <div class="card-title">📁 Storico Rendiconti Salvati</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Artista</th>
+            <th>Progetto</th>
+            <th>Periodo</th>
+            <th>Data</th>
+            <th>Saldo</th>
+            <th>Stato</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="storico-table">
+          <tr><td colspan="7" style="color:var(--gray);padding:24px;text-align:center;font-style:italic;">Nessun rendiconto salvato</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- IMPOSTAZIONI -->
+<div class="view" id="view-impostazioni">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Impostazioni</div>
+      <div class="page-sub">Configura i dati aziendali per i rendiconti</div>
+    </div>
+    <button class="btn btn-primary" onclick="salvaImpostazioni()">Salva</button>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">🏢 Dati Aziendali HOM</div>
+      <div class="field"><label>Ragione Sociale</label><input type="text" id="imp-ragione" value="House of Music S.r.l."></div>
+      <div class="field"><label>P.IVA</label><input type="text" id="imp-piva" placeholder="IT00000000000"></div>
+      <div class="field"><label>Indirizzo</label><input type="text" id="imp-indirizzo" value="Viale Tunisia 39, 20124 Milano"></div>
+      <div class="field"><label>Email</label><input type="text" id="imp-email" placeholder="amministrazione@houseofmusic.it"></div>
+      <div class="field"><label>Telefono</label><input type="text" id="imp-tel" placeholder="+39 02..."></div>
+      <div class="field"><label>Sito Web</label><input type="text" id="imp-web" value="www.houseofmusic.it"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚙️ Parametri Calcolo</div>
+      <div class="field">
+        <label>Soglia Liquidazione (€)</label>
+        <input type="number" id="imp-soglia" value="100" step="1">
+        <div style="font-size:11px;color:var(--gray);margin-top:4px;">Importo minimo per rendere il rendiconto liquidabile</div>
+      </div>
+      <div class="field">
+        <label>Valuta</label>
+        <select id="imp-valuta">
+          <option value="EUR" selected>EUR — Euro (€)</option>
+          <option value="USD">USD — Dollaro ($)</option>
+          <option value="GBP">GBP — Sterlina (£)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Intestazione Rendiconto</label>
+        <input type="text" id="imp-intestazione" value="RENDICONTO ROYALTIES">
+      </div>
+      <div class="card" style="background:rgba(200,169,110,0.05);border-color:rgba(200,169,110,0.2);margin-top:16px;">
+        <div style="font-size:13px;color:var(--gold);font-weight:600;margin-bottom:8px;">Tipi Ricavo Standard</div>
+        <div style="font-size:12px;color:var(--gray-light);line-height:1.8;">
+          • <b>Digitale</b>: streaming, download, digital sales<br>
+          • <b>Fisico</b>: CD, vinile, cassette, merch<br>
+          • <b>Sync</b>: licensing, TV/film/pub, library<br>
+          • <b>Other</b>: publishing, neighboring rights, altro
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- AREA STAMPA (nascosta) -->
+<div class="print-area" id="print-area" style="display:none;"></div>
+
+<!-- MODAL CONFERMA ELABORAZIONE -->
+<div class="modal-overlay" id="modal-elaborazione">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Elaborazione Completata</div>
+      <button class="btn btn-ghost" onclick="chiudiModal('modal-elaborazione')">✕</button>
+    </div>
+    <div id="modal-elaborazione-content"></div>
+    <div style="display:flex;gap:8px;margin-top:24px;">
+      <button class="btn btn-primary" onclick="applicaElaborazione()" style="flex:1;justify-content:center;">✓ Applica e Aggiorna Contratto</button>
+      <button class="btn btn-outline" onclick="chiudiModal('modal-elaborazione')">Annulla</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+var contratti = JSON.parse(localStorage.getItem('hom_roy_contratti') || '[]');
+var rendiconti = JSON.parse(localStorage.getItem('hom_roy_rendiconti') || '[]');
+var impostazioni = JSON.parse(localStorage.getItem('hom_roy_imp') || '{}');
+var excelData = null;
+var elaborazionePendente = null;
+var editingId = null;
+
+// Defaults impostazioni
+impostazioni = Object.assign({
+  ragione: 'House of Music S.r.l.',
+  piva: '',
+  indirizzo: 'Viale Tunisia 39, 20124 Milano',
+  email: '',
+  tel: '',
+  web: 'www.houseofmusic.it',
+  soglia: 100,
+  valuta: 'EUR',
+  intestazione: 'RENDICONTO ROYALTIES'
+}, impostazioni);
+
+// ============================================================
+// UTILS
+// ============================================================
+function fmt(n) {
+  var v = parseFloat(n) || 0;
+  return (v < 0 ? '-' : '') + '€' + Math.abs(v).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+}
+
+function fmtPct(n) { return (parseFloat(n) || 0).toFixed(1) + '%'; }
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success') + ' show';
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+function showView(name) {
+  document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  var el = document.getElementById('view-' + name);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(function(item) {
+    var oc = item.getAttribute('onclick') || '';
+    if (oc.includes("'" + name + "'")) item.classList.add('active');
+  });
+  if (name === 'contratti') renderContratti();
+  if (name === 'dashboard') renderDashboard();
+  if (name === 'rendiconti') { populateSelect('rend-contratto'); renderStorico(); aggiornaRendiconto(); }
+  if (name === 'import') populateSelect('map-contratto');
+  if (name === 'impostazioni') caricaImpostazioni();
+  if (name === 'nuovo-contratto') { if (!editingId) resetForm(); }
+}
+
+function chiudiModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function salva() {
+  localStorage.setItem('hom_roy_contratti', JSON.stringify(contratti));
+  localStorage.setItem('hom_roy_rendiconti', JSON.stringify(rendiconti));
+  localStorage.setItem('hom_roy_imp', JSON.stringify(impostazioni));
+  aggiornaBadges();
+}
+
+function aggiornaBadges() {
+  document.getElementById('badge-contratti').textContent = contratti.length;
+  document.getElementById('badge-rendiconti').textContent = rendiconti.length;
+}
+
+function populateSelect(id) {
+  var sel = document.getElementById(id);
+  var val = sel.value;
+  sel.innerHTML = '<option value="">— Seleziona contratto —</option>';
+  contratti.forEach(function(c) {
+    var opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.artista + ' — ' + c.progetto;
+    sel.appendChild(opt);
+  });
+  if (val) sel.value = val;
+}
+
+function getContratto(id) {
+  return contratti.find(function(c) { return c.id === id; });
+}
+
+// ============================================================
+// CONTRATTI
+// ============================================================
+function salvaContratto() {
+  var artista = document.getElementById('f-artista').value.trim();
+  var progetto = document.getElementById('f-progetto').value.trim();
+  if (!artista || !progetto) { showToast('Artista e Progetto sono obbligatori', 'error'); return; }
+
+  var contratto = {
+    id: editingId || Date.now().toString(),
+    artista: artista,
+    progetto: progetto,
+    label: document.getElementById('f-label').value,
+    data: document.getElementById('f-data').value,
+    note: document.getElementById('f-note').value,
+    pct: {
+      digitale: parseFloat(document.getElementById('f-pct-digitale').value) || 0,
+      fisico: parseFloat(document.getElementById('f-pct-fisico').value) || 0,
+      sync: parseFloat(document.getElementById('f-pct-sync').value) || 0,
+      other: parseFloat(document.getElementById('f-pct-other').value) || 0
+    },
+    saldoIniziale: parseFloat(document.getElementById('f-saldo-iniziale').value) || 0,
+    saldoDesc: document.getElementById('f-saldo-desc').value,
+    saldoAttuale: 0,
+    movimenti: [],
+    createdAt: new Date().toISOString()
+  };
+
+  if (editingId) {
+    var idx = contratti.findIndex(function(c) { return c.id === editingId; });
+    if (idx >= 0) {
+      contratto.saldoAttuale = contratti[idx].saldoAttuale;
+      contratto.movimenti = contratti[idx].movimenti;
+      contratti[idx] = contratto;
+    }
+    showToast('Contratto aggiornato', 'success');
+  } else {
+    contratto.saldoAttuale = contratto.saldoIniziale;
+    contratti.push(contratto);
+    showToast('Contratto salvato!', 'success');
+  }
+
+  editingId = null;
+  salva();
+  resetForm();
+  showView('contratti');
+}
+
+function resetForm() {
+  editingId = null;
+  document.getElementById('form-title').textContent = 'Nuovo Contratto';
+  ['f-artista','f-progetto','f-note','f-saldo-iniziale','f-saldo-desc'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
+  ['f-pct-digitale','f-pct-fisico','f-pct-sync','f-pct-other'].forEach(function(id) {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('f-label').value = '';
+  document.getElementById('f-data').value = '';
+}
+
+function modificaContratto(id) {
+  var c = getContratto(id);
+  if (!c) return;
+  editingId = id;
+  document.getElementById('form-title').textContent = 'Modifica Contratto';
+  document.getElementById('f-artista').value = c.artista;
+  document.getElementById('f-progetto').value = c.progetto;
+  document.getElementById('f-label').value = c.label || '';
+  document.getElementById('f-data').value = c.data || '';
+  document.getElementById('f-note').value = c.note || '';
+  document.getElementById('f-pct-digitale').value = c.pct.digitale;
+  document.getElementById('f-pct-fisico').value = c.pct.fisico;
+  document.getElementById('f-pct-sync').value = c.pct.sync;
+  document.getElementById('f-pct-other').value = c.pct.other;
+  document.getElementById('f-saldo-iniziale').value = c.saldoIniziale;
+  document.getElementById('f-saldo-desc').value = c.saldoDesc || '';
+  showView('nuovo-contratto');
+}
+
+function eliminaContratto(id) {
+  if (!confirm('Eliminare questo contratto e tutti i suoi dati?')) return;
+  contratti = contratti.filter(function(c) { return c.id !== id; });
+  salva();
+  renderContratti();
+  showToast('Contratto eliminato', 'success');
+}
+
+function renderContratti() {
+  var tbody = document.getElementById('contratti-table');
+  if (!contratti.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="color:var(--gray);padding:24px;text-align:center;font-style:italic;">Nessun contratto</td></tr>';
+    return;
+  }
+  tbody.innerHTML = contratti.map(function(c) {
+    var saldo = c.saldoAttuale || c.saldoIniziale || 0;
+    var cls = saldo > 0 ? 'amount-positive' : saldo < 0 ? 'amount-negative' : 'amount-neutral';
+    return '<tr>' +
+      '<td><b>' + c.artista + '</b></td>' +
+      '<td>' + c.progetto + (c.label ? '<br><span style="font-size:11px;color:var(--gray);">' + c.label + '</span>' : '') + '</td>' +
+      '<td style="font-family:DM Mono,monospace;">' + fmtPct(c.pct.digitale) + '</td>' +
+      '<td style="font-family:DM Mono,monospace;">' + fmtPct(c.pct.fisico) + '</td>' +
+      '<td style="font-family:DM Mono,monospace;">' + fmtPct(c.pct.sync) + '</td>' +
+      '<td style="font-family:DM Mono,monospace;">' + fmtPct(c.pct.other) + '</td>' +
+      '<td class="amount-neutral">' + fmt(c.saldoIniziale) + '</td>' +
+      '<td class="' + cls + '">' + fmt(saldo) + '</td>' +
+      '<td style="display:flex;gap:6px;">' +
+        '<button class="btn btn-sm btn-outline" onclick="modificaContratto(\'' + c.id + '\')">Modifica</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="eliminaContratto(\'' + c.id + '\')">✕</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDashboard() {
+  var totaleMaturato = 0;
+  var totaleLiquidabile = 0;
+  var totaleSospeso = 0;
+  var soglia = parseFloat(impostazioni.soglia) || 100;
+
+  var rows = contratti.map(function(c) {
+    var saldo = c.saldoAttuale !== undefined ? c.saldoAttuale : c.saldoIniziale || 0;
+    totaleMaturato += saldo;
+    var stato, tag;
+    if (saldo >= soglia) {
+      totaleLiquidabile += saldo;
+      stato = 'liquidabile';
+      tag = '<span class="tag tag-liquidabile">Liquidabile</span>';
+    } else if (saldo < 0) {
+      totaleSospeso += Math.abs(saldo);
+      stato = 'negativo';
+      tag = '<span class="tag tag-negativo">Negativo</span>';
+    } else {
+      tag = '<span class="tag tag-neutro">In Maturazione</span>';
+    }
+    var cls = saldo > 0 ? 'amount-positive' : saldo < 0 ? 'amount-negative' : 'amount-neutral';
+    var lastMov = c.movimenti && c.movimenti.length ? c.movimenti[c.movimenti.length-1].data : (c.createdAt ? c.createdAt.substring(0,10) : '—');
+    return '<tr>' +
+      '<td><b>' + c.artista + '</b></td>' +
+      '<td>' + c.progetto + '</td>' +
+      '<td class="' + cls + '" style="font-size:16px;">' + fmt(saldo) + '</td>' +
+      '<td>' + tag + '</td>' +
+      '<td style="font-family:DM Mono,monospace;font-size:11px;color:var(--gray);">' + lastMov + '</td>' +
+      '<td><button class="btn btn-sm btn-outline" onclick="apriRendiconto(\'' + c.id + '\')">Rendiconto</button></td>' +
+    '</tr>';
+  }).join('');
+
+  document.getElementById('dash-contratti').textContent = contratti.length;
+  document.getElementById('dash-maturato').textContent = fmt(totaleMaturato);
+  document.getElementById('dash-maturato').className = 'stat-value ' + (totaleMaturato > 0 ? 'green' : totaleMaturato < 0 ? 'red' : '');
+  document.getElementById('dash-liquidabile').textContent = fmt(totaleLiquidabile);
+  document.getElementById('dash-sospeso').textContent = fmt(totaleSospeso);
+
+  document.getElementById('dash-table').innerHTML = rows ||
+    '<tr><td colspan="6" style="color:var(--gray);padding:24px;text-align:center;font-style:italic;">Nessun contratto — aggiungine uno per iniziare</td></tr>';
+}
+
+function apriRendiconto(id) {
+  showView('rendiconti');
+  setTimeout(function() {
+    document.getElementById('rend-contratto').value = id;
+    aggiornaRendiconto();
+  }, 100);
+}
+
+// ============================================================
+// IMPORT EXCEL
+// ============================================================
+function handleFileUpload(input) {
+  var file = input.files[0];
+  if (!file) return;
+  leggiFile(file);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  var file = e.dataTransfer.files[0];
+  if (file) leggiFile(file);
+}
+
+function leggiFile(file) {
+  document.getElementById('file-info').style.display = 'block';
+  document.getElementById('file-name').textContent = '📄 ' + file.name;
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var workbook = XLSX.read(data, { type: 'array' });
+      var sheet = workbook.Sheets[workbook.SheetNames[0]];
+      var json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      excelData = { headers: json[0] || [], rows: json.slice(1), filename: file.name };
+
+      document.getElementById('file-rows').textContent = (json.length - 1) + ' righe trovate · ' + (excelData.headers.length) + ' colonne';
+
+      // Anteprima
+      var preview = '<table><thead><tr>' +
+        excelData.headers.slice(0,8).map(function(h) { return '<th>' + (h || '') + '</th>'; }).join('') +
+        (excelData.headers.length > 8 ? '<th style="color:var(--gray)">+' + (excelData.headers.length-8) + ' col.</th>' : '') +
+        '</tr></thead><tbody>' +
+        excelData.rows.slice(0,10).map(function(row) {
+          return '<tr>' + excelData.headers.slice(0,8).map(function(h, i) {
+            return '<td>' + (row[i] !== undefined ? row[i] : '') + '</td>';
+          }).join('') + '</tr>';
+        }).join('') +
+        '</tbody></table>';
+
+      document.getElementById('preview-container').innerHTML = preview;
+
+      // Auto-detect colonne comuni
+      var colNames = excelData.headers.map(function(h) { return (h || '').toString().toLowerCase(); });
+      var importoGuess = colNames.find(function(c) { return c.includes('royalt') || c.includes('amount') || c.includes('importo') || c.includes('net') || c.includes('pagab'); });
+      var tipoGuess = colNames.find(function(c) { return c.includes('type') || c.includes('tipo') || c.includes('revenue') || c.includes('source'); });
+      var artistaGuess = colNames.find(function(c) { return c.includes('artist') || c.includes('artista') || c.includes('release') || c.includes('album'); });
+
+      if (importoGuess) document.getElementById('map-importo').value = excelData.headers[colNames.indexOf(importoGuess)];
+      if (tipoGuess) document.getElementById('map-tipo').value = excelData.headers[colNames.indexOf(tipoGuess)];
+      if (artistaGuess) document.getElementById('map-artista').value = excelData.headers[colNames.indexOf(artistaGuess)];
+
+      showToast('File caricato: ' + excelData.rows.length + ' righe', 'success');
+    } catch(err) {
+      showToast('Errore lettura file: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function elaboraExcel() {
+  if (!excelData) { showToast('Carica prima un file Excel', 'error'); return; }
+  var contrattoId = document.getElementById('map-contratto').value;
+  if (!contrattoId) { showToast('Seleziona il contratto da aggiornare', 'error'); return; }
+  var contratto = getContratto(contrattoId);
+  if (!contratto) return;
+
+  var colImporto = document.getElementById('map-importo').value.trim();
+  var colTipo = document.getElementById('map-tipo').value.trim();
+
+  if (!colImporto) { showToast('Indica la colonna dell\'importo royalty', 'error'); return; }
+
+  var idxImporto = excelData.headers.indexOf(colImporto);
+  var idxTipo = excelData.headers.findIndex(function(h) { return h === colTipo; });
+
+  if (idxImporto === -1) { showToast('Colonna "' + colImporto + '" non trovata nel file', 'error'); return; }
+
+  // Aggrega per tipo
+  var totali = { digitale: 0, fisico: 0, sync: 0, other: 0, raw: 0 };
+  var righeValide = 0;
+
+  excelData.rows.forEach(function(row) {
+    var val = parseFloat((row[idxImporto] || '0').toString().replace(',', '.'));
+    if (isNaN(val)) return;
+    righeValide++;
+    totali.raw += val;
+
+    if (idxTipo >= 0) {
+      var tipo = (row[idxTipo] || '').toString().toLowerCase();
+      if (tipo.includes('digit') || tipo.includes('stream') || tipo.includes('download') || tipo.includes('online')) {
+        totali.digitale += val;
+      } else if (tipo.includes('fisic') || tipo.includes('physic') || tipo.includes('cd') || tipo.includes('vinyl') || tipo.includes('merch')) {
+        totali.fisico += val;
+      } else if (tipo.includes('sync') || tipo.includes('licens') || tipo.includes('tv') || tipo.includes('film')) {
+        totali.sync += val;
+      } else {
+        totali.other += val;
+      }
+    } else {
+      totali.digitale += val; // tutto come digitale se nessuna colonna tipo
+    }
+  });
+
+  // Calcola royalties
+  var royDigitale = totali.digitale * (contratto.pct.digitale / 100);
+  var royFisico = totali.fisico * (contratto.pct.fisico / 100);
+  var roySync = totali.sync * (contratto.pct.sync / 100);
+  var royOther = totali.other * (contratto.pct.other / 100);
+  var royTotale = royDigitale + royFisico + roySync + royOther;
+  var nuovoSaldo = (contratto.saldoAttuale !== undefined ? contratto.saldoAttuale : contratto.saldoIniziale) + royTotale;
+
+  elaborazionePendente = {
+    contrattoId: contrattoId,
+    totali: totali,
+    royalties: { digitale: royDigitale, fisico: royFisico, sync: roySync, other: royOther, totale: royTotale },
+    nuovoSaldo: nuovoSaldo,
+    righeValide: righeValide,
+    filename: excelData.filename,
+    data: new Date().toISOString().substring(0,10)
+  };
+
+  // Mostra modal risultato
+  var soglia = parseFloat(impostazioni.soglia) || 100;
+  var statoClass = nuovoSaldo >= soglia ? 'amount-positive' : nuovoSaldo < 0 ? 'amount-negative' : 'amount-neutral';
+  var statoLabel = nuovoSaldo >= soglia ? '✅ Liquidabile' : nuovoSaldo < 0 ? '🔴 Negativo' : '⏳ In Maturazione';
+
+  document.getElementById('modal-elaborazione-content').innerHTML =
+    '<p style="font-size:13px;color:var(--gray-light);margin-bottom:20px;">Elaborato <b style="color:var(--white)">' + righeValide + ' righe</b> dal file <b style="color:var(--gold)">' + excelData.filename + '</b> per il contratto <b style="color:var(--white)">' + contratto.artista + ' — ' + contratto.progetto + '</b>.</p>' +
+    '<div style="background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px;">' +
+      '<div class="breakdown-row"><span class="breakdown-label">Digitale (ricavi: ' + fmt(totali.digitale) + ' × ' + fmtPct(contratto.pct.digitale) + ')</span><span class="breakdown-amount amount-positive">' + fmt(royDigitale) + '</span></div>' +
+      '<div class="breakdown-row"><span class="breakdown-label">Fisico (ricavi: ' + fmt(totali.fisico) + ' × ' + fmtPct(contratto.pct.fisico) + ')</span><span class="breakdown-amount amount-positive">' + fmt(royFisico) + '</span></div>' +
+      '<div class="breakdown-row"><span class="breakdown-label">Sync (ricavi: ' + fmt(totali.sync) + ' × ' + fmtPct(contratto.pct.sync) + ')</span><span class="breakdown-amount amount-positive">' + fmt(roySync) + '</span></div>' +
+      '<div class="breakdown-row"><span class="breakdown-label">Other (ricavi: ' + fmt(totali.other) + ' × ' + fmtPct(contratto.pct.other) + ')</span><span class="breakdown-amount amount-positive">' + fmt(royOther) + '</span></div>' +
+      '<div style="border-top:1px solid var(--border);padding-top:12px;margin-top:4px;display:flex;justify-content:space-between;align-items:center;">' +
+        '<span style="font-family:Syne,sans-serif;font-weight:700;">Royalties Calcolate</span>' +
+        '<span class="amount-positive" style="font-size:18px;">' + fmt(royTotale) + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:16px;background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;">' +
+      '<div><div style="font-family:DM Mono,monospace;font-size:11px;color:var(--gray);">NUOVO SALDO</div><div style="font-size:11px;color:var(--gray);">Saldo precedente ' + fmt(contratto.saldoAttuale !== undefined ? contratto.saldoAttuale : contratto.saldoIniziale) + ' + royalties ' + fmt(royTotale) + '</div></div>' +
+      '<div style="text-align:right;"><div class="' + statoClass + '" style="font-size:22px;font-family:Syne,sans-serif;font-weight:700;">' + fmt(nuovoSaldo) + '</div><div>' + statoLabel + '</div></div>' +
+    '</div>';
+
+  document.getElementById('modal-elaborazione').classList.add('open');
+}
+
+function applicaElaborazione() {
+  if (!elaborazionePendente) return;
+  var idx = contratti.findIndex(function(c) { return c.id === elaborazionePendente.contrattoId; });
+  if (idx === -1) return;
+
+  contratti[idx].saldoAttuale = elaborazionePendente.nuovoSaldo;
+  contratti[idx].movimenti = contratti[idx].movimenti || [];
+  contratti[idx].movimenti.push({
+    data: elaborazionePendente.data,
+    tipo: 'import_excel',
+    filename: elaborazionePendente.filename,
+    royalties: elaborazionePendente.royalties,
+    totali: elaborazionePendente.totali,
+    nuovoSaldo: elaborazionePendente.nuovoSaldo
+  });
+
+  salva();
+  chiudiModal('modal-elaborazione');
+  showToast('Contratto aggiornato! Saldo: ' + fmt(elaborazionePendente.nuovoSaldo), 'success');
+  renderDashboard();
+  elaborazionePendente = null;
+}
+
+// ============================================================
+// RENDICONTI
+// ============================================================
+function aggiornaRendiconto() {
+  var id = document.getElementById('rend-contratto').value;
+  var periodo = document.getElementById('rend-periodo').value || '—';
+  var data = document.getElementById('rend-data').value || new Date().toISOString().substring(0,10);
+
+  if (!id) {
+    document.getElementById('rend-preview').style.display = 'none';
+    return;
+  }
+
+  var c = getContratto(id);
+  if (!c) return;
+
+  var saldo = c.saldoAttuale !== undefined ? c.saldoAttuale : c.saldoIniziale || 0;
+  var soglia = parseFloat(impostazioni.soglia) || 100;
+  var isLiquidabile = saldo >= soglia;
+  var isNegativo = saldo < 0;
+  var statoColor = isLiquidabile ? '#2d7a4f' : isNegativo ? '#c94f3a' : '#666';
+  var statoLabel = isLiquidabile ? 'LIQUIDABILE' : isNegativo ? 'NEGATIVO — NON LIQUIDABILE' : 'IN MATURAZIONE';
+  var sogliaTxt = isLiquidabile ? 'Il saldo supera la soglia minima di €' + soglia.toFixed(2) + ' ed è liquidabile.' : isNegativo ? 'Il saldo è negativo. Non è possibile procedere alla liquidazione.' : 'Il saldo non ha ancora raggiunto la soglia minima di €' + soglia.toFixed(2) + '.';
+
+  // Movimenti per breakdown
+  var lastMov = c.movimenti && c.movimenti.length ? c.movimenti[c.movimenti.length-1] : null;
+
+  var movHtml = '';
+  if (lastMov && lastMov.royalties) {
+    var r = lastMov.royalties;
+    var t = lastMov.totali || {};
+    movHtml = '<table style="width:100%;border-collapse:collapse;margin-bottom:24px;">' +
+      '<thead><tr style="border-bottom:2px solid #000;">' +
+        '<th style="text-align:left;padding:8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Tipologia</th>' +
+        '<th style="text-align:right;padding:8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Ricavi Lordi</th>' +
+        '<th style="text-align:right;padding:8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;">% Contratto</th>' +
+        '<th style="text-align:right;padding:8px;font-size:11px;letter-spacing:1px;text-transform:uppercase;">Royalties</th>' +
+      '</tr></thead><tbody>' +
+      [
+        ['Digitale', t.digitale||0, c.pct.digitale, r.digitale||0],
+        ['Fisico', t.fisico||0, c.pct.fisico, r.fisico||0],
+        ['Sync', t.sync||0, c.pct.sync, r.sync||0],
+        ['Other', t.other||0, c.pct.other, r.other||0]
+      ].map(function(row) {
+        return '<tr style="border-bottom:1px solid #eee;">' +
+          '<td style="padding:8px;">' + row[0] + '</td>' +
+          '<td style="text-align:right;padding:8px;font-family:monospace;">€' + (row[1]||0).toFixed(2) + '</td>' +
+          '<td style="text-align:right;padding:8px;font-family:monospace;">' + (row[2]||0).toFixed(1) + '%</td>' +
+          '<td style="text-align:right;padding:8px;font-family:monospace;">€' + (row[3]||0).toFixed(2) + '</td>' +
+        '</tr>';
+      }).join('') +
+      '<tr style="border-top:2px solid #000;font-weight:bold;">' +
+        '<td colspan="3" style="padding:10px 8px;font-size:14px;">TOTALE ROYALTIES PERIODO</td>' +
+        '<td style="text-align:right;padding:10px 8px;font-size:14px;font-family:monospace;">€' + (r.totale||0).toFixed(2) + '</td>' +
+      '</tr></tbody></table>';
+  }
+
+  var saldoFormatted = '€' + Math.abs(saldo).toFixed(2);
+  var saldoHtml = isNegativo
+    ? '<span style="color:#c94f3a;font-size:28px;font-weight:700;font-family:monospace;">-' + saldoFormatted + '</span>'
+    : '<span style="color:#2d7a4f;font-size:28px;font-weight:700;font-family:monospace;">' + saldoFormatted + '</span>';
+
+  var html = '<div style="max-width:794px;margin:0 auto;font-family:Georgia,serif;color:#111;">' +
+    // HEADER
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #000;padding-bottom:20px;margin-bottom:28px;">' +
+      '<div>' +
+        '<div style="font-size:28px;font-weight:900;letter-spacing:6px;font-family:Arial,sans-serif;">HOM</div>' +
+        '<div style="font-size:11px;letter-spacing:3px;color:#666;margin-top:2px;font-family:Arial,sans-serif;">HOUSE OF MUSIC</div>' +
+        '<div style="font-size:11px;color:#888;margin-top:8px;font-family:Arial,sans-serif;">' + (impostazioni.indirizzo || '') + '</div>' +
+        (impostazioni.piva ? '<div style="font-size:11px;color:#888;font-family:Arial,sans-serif;">P.IVA: ' + impostazioni.piva + '</div>' : '') +
+        (impostazioni.email ? '<div style="font-size:11px;color:#888;font-family:Arial,sans-serif;">' + impostazioni.email + '</div>' : '') +
+      '</div>' +
+      '<div style="text-align:right;">' +
+        '<div style="font-size:16px;font-weight:700;letter-spacing:2px;font-family:Arial,sans-serif;">' + impostazioni.intestazione + '</div>' +
+        '<div style="font-size:13px;color:#666;margin-top:4px;font-family:Arial,sans-serif;">Periodo: <b>' + periodo + '</b></div>' +
+        '<div style="font-size:13px;color:#666;font-family:Arial,sans-serif;">Data: <b>' + data + '</b></div>' +
+        '<div style="font-size:13px;color:#666;font-family:Arial,sans-serif;">N°: <b>' + (rendiconti.length + 1).toString().padStart(4,'0') + '</b></div>' +
+      '</div>' +
+    '</div>' +
+
+    // DESTINATARIO
+    '<div style="background:#f8f8f8;border-left:4px solid #000;padding:16px 20px;margin-bottom:28px;">' +
+      '<div style="font-size:11px;letter-spacing:2px;color:#888;margin-bottom:6px;font-family:Arial,sans-serif;">ARTISTA / BENEFICIARIO</div>' +
+      '<div style="font-size:20px;font-weight:700;font-family:Arial,sans-serif;">' + c.artista + '</div>' +
+      '<div style="font-size:14px;color:#555;font-family:Arial,sans-serif;">' + c.progetto + (c.label ? ' · ' + c.label : '') + '</div>' +
+    '</div>' +
+
+    // CONTRATTO
+    '<div style="margin-bottom:24px;">' +
+      '<div style="font-size:12px;letter-spacing:2px;font-weight:700;margin-bottom:12px;font-family:Arial,sans-serif;border-bottom:1px solid #ddd;padding-bottom:6px;">TERMINI CONTRATTUALI</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">' +
+        ['Digitale','Fisico','Sync','Other'].map(function(tipo, i) {
+          var pct = [c.pct.digitale, c.pct.fisico, c.pct.sync, c.pct.other][i];
+          return '<div style="background:#f8f8f8;padding:12px;text-align:center;border:1px solid #eee;">' +
+            '<div style="font-size:10px;letter-spacing:1px;color:#888;font-family:Arial,sans-serif;">' + tipo.toUpperCase() + '</div>' +
+            '<div style="font-size:22px;font-weight:700;font-family:monospace;">' + (pct||0).toFixed(1) + '%</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+    '</div>' +
+
+    // BREAKDOWN ROYALTIES
+    (movHtml ? '<div style="margin-bottom:24px;">' +
+      '<div style="font-size:12px;letter-spacing:2px;font-weight:700;margin-bottom:12px;font-family:Arial,sans-serif;border-bottom:1px solid #ddd;padding-bottom:6px;">DETTAGLIO ROYALTIES PERIODO</div>' +
+      movHtml + '</div>' : '') +
+
+    // RIEPILOGO SALDO
+    '<div style="background:#f8f8f8;border:2px solid #000;padding:20px;margin-bottom:24px;">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+        '<span style="font-size:12px;letter-spacing:2px;font-family:Arial,sans-serif;">SALDO PRECEDENTE</span>' +
+        '<span style="font-family:monospace;font-size:16px;">€' + (c.saldoIniziale||0).toFixed(2) + '</span>' +
+      '</div>' +
+      (lastMov ? '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">' +
+        '<span style="font-size:12px;letter-spacing:2px;font-family:Arial,sans-serif;">ROYALTIES PERIODO</span>' +
+        '<span style="font-family:monospace;font-size:16px;color:#2d7a4f;">+€' + (lastMov.royalties ? (lastMov.royalties.totale||0).toFixed(2) : '0.00') + '</span>' +
+      '</div>' : '') +
+      '<div style="border-top:2px solid #000;padding-top:12px;display:flex;justify-content:space-between;align-items:center;">' +
+        '<span style="font-size:14px;font-weight:700;letter-spacing:2px;font-family:Arial,sans-serif;">SALDO ATTUALE</span>' +
+        saldoHtml +
+      '</div>' +
+    '</div>' +
+
+    // STATO
+    '<div style="border:2px solid ' + statoColor + ';padding:16px 20px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;">' +
+      '<div>' +
+        '<div style="font-size:16px;font-weight:900;color:' + statoColor + ';letter-spacing:2px;font-family:Arial,sans-serif;">' + statoLabel + '</div>' +
+        '<div style="font-size:12px;color:#666;margin-top:4px;font-family:Arial,sans-serif;">' + sogliaTxt + '</div>' +
+      '</div>' +
+      (isLiquidabile ? '<div style="font-size:24px;">✓</div>' : isNegativo ? '<div style="font-size:24px;color:' + statoColor + ';">✗</div>' : '<div style="font-size:24px;">⏳</div>') +
+    '</div>' +
+
+    // FIRMA
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:40px;padding-top:20px;border-top:1px solid #ddd;">' +
+      '<div>' +
+        '<div style="font-size:11px;letter-spacing:1px;color:#888;margin-bottom:40px;font-family:Arial,sans-serif;">PER HOUSE OF MUSIC</div>' +
+        '<div style="border-top:1px solid #000;padding-top:8px;font-size:11px;color:#888;font-family:Arial,sans-serif;">Firma autorizzata</div>' +
+      '</div>' +
+      '<div>' +
+        '<div style="font-size:11px;letter-spacing:1px;color:#888;margin-bottom:40px;font-family:Arial,sans-serif;">PER ACCETTAZIONE — ' + c.artista.toUpperCase() + '</div>' +
+        '<div style="border-top:1px solid #000;padding-top:8px;font-size:11px;color:#888;font-family:Arial,sans-serif;">Firma artista / avente diritto</div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div style="margin-top:24px;text-align:center;font-size:10px;color:#aaa;font-family:Arial,sans-serif;">Documento generato da HOM Royalty Manager · ' + new Date().toLocaleDateString('it-IT') + ' · ' + (impostazioni.web || 'www.houseofmusic.it') + '</div>' +
+  '</div>';
+
+  document.getElementById('statement-content').innerHTML = html;
+  document.getElementById('rend-preview').style.display = 'block';
+}
+
+function stampaRendiconto() {
+  var content = document.getElementById('statement-content').innerHTML;
+  if (!content) { showToast('Seleziona prima un contratto', 'error'); return; }
+
+  var win = window.open('', '_blank');
+  win.document.write('<html><head><title>Rendiconto HOM</title>' +
+    '<style>body{margin:40px;font-family:Georgia,serif;} @media print{body{margin:20px;}} table{width:100%;border-collapse:collapse;}</style>' +
+    '</head><body>' + content + '</body></html>');
+  win.document.close();
+  win.focus();
+  setTimeout(function() { win.print(); }, 500);
+}
+
+function salvaRendiconto() {
+  var id = document.getElementById('rend-contratto').value;
+  if (!id) { showToast('Seleziona prima un contratto', 'error'); return; }
+  var c = getContratto(id);
+  var saldo = c ? (c.saldoAttuale !== undefined ? c.saldoAttuale : c.saldoIniziale || 0) : 0;
+  var soglia = parseFloat(impostazioni.soglia) || 100;
+
+  var rend = {
+    id: Date.now().toString(),
+    contrattoId: id,
+    artista: c ? c.artista : '',
+    progetto: c ? c.progetto : '',
+    periodo: document.getElementById('rend-periodo').value,
+    data: document.getElementById('rend-data').value || new Date().toISOString().substring(0,10),
+    saldo: saldo,
+    stato: saldo >= soglia ? 'liquidabile' : saldo < 0 ? 'negativo' : 'in_maturazione',
+    html: document.getElementById('statement-content').innerHTML,
+    createdAt: new Date().toISOString()
+  };
+
+  rendiconti.unshift(rend);
+  salva();
+  renderStorico();
+  showToast('Rendiconto salvato!', 'success');
+}
+
+function renderStorico() {
+  var tbody = document.getElementById('storico-table');
+  if (!rendiconti.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="color:var(--gray);padding:24px;text-align:center;font-style:italic;">Nessun rendiconto salvato</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rendiconti.map(function(r) {
+    var tagClass = r.stato === 'liquidabile' ? 'tag-liquidabile' : r.stato === 'negativo' ? 'tag-negativo' : 'tag-neutro';
+    var tagLabel = r.stato === 'liquidabile' ? 'Liquidabile' : r.stato === 'negativo' ? 'Negativo' : 'In Maturazione';
+    var cls = r.saldo > 0 ? 'amount-positive' : r.saldo < 0 ? 'amount-negative' : 'amount-neutral';
+    return '<tr>' +
+      '<td><b>' + r.artista + '</b></td>' +
+      '<td>' + r.progetto + '</td>' +
+      '<td style="font-family:DM Mono,monospace;font-size:12px;">' + (r.periodo || '—') + '</td>' +
+      '<td style="font-family:DM Mono,monospace;font-size:12px;">' + r.data + '</td>' +
+      '<td class="' + cls + '">' + fmt(r.saldo) + '</td>' +
+      '<td><span class="tag ' + tagClass + '">' + tagLabel + '</span></td>' +
+      '<td style="display:flex;gap:6px;">' +
+        '<button class="btn btn-sm btn-outline" onclick="ristampaRendiconto(\'' + r.id + '\')">🖨️ Stampa</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="eliminaRendiconto(\'' + r.id + '\')">✕</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function ristampaRendiconto(id) {
+  var r = rendiconti.find(function(x) { return x.id === id; });
+  if (!r || !r.html) return;
+  var win = window.open('', '_blank');
+  win.document.write('<html><head><title>Rendiconto HOM</title><style>body{margin:40px;font-family:Georgia,serif;} table{width:100%;border-collapse:collapse;}</style></head><body>' + r.html + '</body></html>');
+  win.document.close();
+  win.focus();
+  setTimeout(function() { win.print(); }, 500);
+}
+
+function eliminaRendiconto(id) {
+  if (!confirm('Eliminare questo rendiconto?')) return;
+  rendiconti = rendiconti.filter(function(r) { return r.id !== id; });
+  salva();
+  renderStorico();
+  showToast('Rendiconto eliminato', 'success');
+}
+
+// ============================================================
+// IMPOSTAZIONI
+// ============================================================
+function caricaImpostazioni() {
+  document.getElementById('imp-ragione').value = impostazioni.ragione || '';
+  document.getElementById('imp-piva').value = impostazioni.piva || '';
+  document.getElementById('imp-indirizzo').value = impostazioni.indirizzo || '';
+  document.getElementById('imp-email').value = impostazioni.email || '';
+  document.getElementById('imp-tel').value = impostazioni.tel || '';
+  document.getElementById('imp-web').value = impostazioni.web || '';
+  document.getElementById('imp-soglia').value = impostazioni.soglia || 100;
+  document.getElementById('imp-valuta').value = impostazioni.valuta || 'EUR';
+  document.getElementById('imp-intestazione').value = impostazioni.intestazione || 'RENDICONTO ROYALTIES';
+}
+
+function salvaImpostazioni() {
+  impostazioni.ragione = document.getElementById('imp-ragione').value;
+  impostazioni.piva = document.getElementById('imp-piva').value;
+  impostazioni.indirizzo = document.getElementById('imp-indirizzo').value;
+  impostazioni.email = document.getElementById('imp-email').value;
+  impostazioni.tel = document.getElementById('imp-tel').value;
+  impostazioni.web = document.getElementById('imp-web').value;
+  impostazioni.soglia = parseFloat(document.getElementById('imp-soglia').value) || 100;
+  impostazioni.valuta = document.getElementById('imp-valuta').value;
+  impostazioni.intestazione = document.getElementById('imp-intestazione').value;
+  salva();
+  showToast('Impostazioni salvate!', 'success');
+}
+
+// ============================================================
+// INIT
+// ============================================================
+function init() {
+  aggiornaBadges();
+  renderDashboard();
+  // Imposta data odierna nel form rendiconto
+  document.getElementById('rend-data').value = new Date().toISOString().substring(0,10);
+  document.getElementById('f-data').value = new Date().toISOString().substring(0,10);
+}
+
+window.showView = showView;
+window.salvaContratto = salvaContratto;
+window.resetForm = resetForm;
+window.modificaContratto = modificaContratto;
+window.eliminaContratto = eliminaContratto;
+window.handleFileUpload = handleFileUpload;
+window.handleDrop = handleDrop;
+window.elaboraExcel = elaboraExcel;
+window.applicaElaborazione = applicaElaborazione;
+window.aggiornaRendiconto = aggiornaRendiconto;
+window.stampaRendiconto = stampaRendiconto;
+window.salvaRendiconto = salvaRendiconto;
+window.ristampaRendiconto = ristampaRendiconto;
+window.eliminaRendiconto = eliminaRendiconto;
+window.apriRendiconto = apriRendiconto;
+window.chiudiModal = chiudiModal;
+window.salvaImpostazioni = salvaImpostazioni;
+
+init();
+</script>
+</body>
+</html>
