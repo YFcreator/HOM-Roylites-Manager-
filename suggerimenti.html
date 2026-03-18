@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HOM — Suggerimenti Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.2.2/docx.umd.min.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyCYU0IVxNt6LYB9U8aIhRzEG-ps8Z3mx7A",
+  authDomain: "hom-linkedin.firebaseapp.com",
+  projectId: "hom-linkedin",
+  storageBucket: "hom-linkedin.firebasestorage.app",
+  messagingSenderId: "280456987425",
+  appId: "1:280456987425:web:dc9c386dc9463681983460"
+});
+window.db = firebase.firestore();
+</script>
+<style>
+:root{--black:#0a0a0a;--white:#f5f2ec;--gold:#c8a96e;--gold-light:#e2c98a;--gray:#6b6560;--gray-light:#b5b0a8;--red:#c94f3a;--green:#3a7c5a;--border:rgba(200,169,110,0.2);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--black);color:var(--white);font-family:'DM Sans',sans-serif;min-height:100vh;}
+.container{max-width:800px;margin:0 auto;padding:48px 24px;}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:48px;padding-bottom:28px;border-bottom:1px solid var(--border);}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-diamond{width:28px;height:28px;background:var(--gold);clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%);}
+.logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:4px;}
+.logo-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--gray);letter-spacing:0.2em;text-transform:uppercase;}
+.back-link{font-size:12px;color:var(--gray);text-decoration:none;font-family:'DM Mono',monospace;}
+.back-link:hover{color:var(--gold);}
+.admin-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding:14px 18px;background:rgba(200,169,110,0.05);border:1px solid var(--border);border-radius:8px;}
+.admin-count{font-family:'DM Mono',monospace;font-size:13px;color:var(--gold);}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:6px;font-size:13px;cursor:pointer;border:none;font-family:'DM Sans',sans-serif;font-weight:500;}
+.btn-primary{background:var(--gold);color:var(--black);}
+.btn-outline{background:transparent;color:var(--white);border:1px solid var(--border);}
+.btn-outline:hover{border-color:var(--gold);color:var(--gold);}
+.sug-item{padding:18px;border:1px solid var(--border);border-radius:8px;margin-bottom:10px;position:relative;}
+.sug-item:hover{border-color:rgba(200,169,110,0.4);}
+.sug-meta{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.sug-nome{font-weight:600;font-size:14px;}
+.tag{font-family:'DM Mono',monospace;font-size:10px;padding:3px 8px;border-radius:20px;}
+.tag-bug{background:rgba(201,79,58,0.15);color:var(--red);}
+.tag-feature{background:rgba(200,169,110,0.15);color:var(--gold);}
+.tag-miglioramento{background:rgba(74,127,181,0.15);color:#6495ed;}
+.tag-contratto,.tag-rendiconto{background:rgba(58,124,90,0.15);color:#5aab7a;}
+.tag-altro{background:rgba(107,101,96,0.15);color:var(--gray-light);}
+.tag-alta{background:rgba(201,79,58,0.15);color:var(--red);}
+.sug-data{font-family:'DM Mono',monospace;font-size:10px;color:var(--gray);margin-left:auto;}
+.sug-testo{font-size:13px;line-height:1.7;color:var(--white);}
+.sug-delete{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--gray);cursor:pointer;font-size:14px;opacity:0;}
+.sug-item:hover .sug-delete{opacity:1;}
+.sug-delete:hover{color:var(--red);}
+.loading{text-align:center;padding:40px;color:var(--gray);font-family:'DM Mono',monospace;}
+.empty{text-align:center;padding:40px;color:var(--gray);font-style:italic;}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-diamond"></div>
+      <div>
+        <div class="logo-text">HOM</div>
+        <div class="logo-sub">Admin Suggerimenti</div>
+      </div>
+    </div>
+    <a href="index.html" class="back-link">← Torna all'app</a>
+  </div>
+
+  <div class="admin-bar">
+    <div class="admin-count" id="sug-count">Caricamento...</div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" onclick="scaricaWord()" id="btn-word">📄 Scarica Word</button>
+      <button class="btn btn-outline" onclick="ricarica()" style="font-size:12px;padding:8px 14px;">↻ Aggiorna</button>
+      <button class="btn btn-outline" onclick="svuotaTutto()" style="font-size:12px;padding:8px 14px;color:var(--red);border-color:rgba(201,79,58,0.3);">🗑️ Svuota tutto</button>
+    </div>
+  </div>
+
+  <div id="sug-lista"><div class="loading">Caricamento suggerimenti da Firebase...</div></div>
+</div>
+
+<script>
+var suggerimenti = [];
+var CATEGORIE = {
+  feature:{label:'Nuova funzione',cls:'tag-feature'},
+  bug:{label:'Bug / Errore',cls:'tag-bug'},
+  miglioramento:{label:'Miglioramento',cls:'tag-miglioramento'},
+  contratto:{label:'Contratto / Calcoli',cls:'tag-contratto'},
+  rendiconto:{label:'Rendiconto / PDF',cls:'tag-rendiconto'},
+  altro:{label:'Altro',cls:'tag-altro'}
+};
+var PRIORITA = {
+  alta:{label:'🔴 Alta',cls:'tag-alta'},
+  normale:{label:'Normale',cls:''},
+  bassa:{label:'Bassa',cls:''}
+};
+
+function ricarica() {
+  document.getElementById('sug-lista').innerHTML = '<div class="loading">Caricamento...</div>';
+  window.db.collection('suggerimenti-royalties')
+    .orderBy('ts', 'desc')
+    .get()
+    .then(function(snap) {
+      suggerimenti = [];
+      snap.forEach(function(doc) {
+        suggerimenti.push(Object.assign({ id: doc.id }, doc.data()));
+      });
+      renderLista();
+    })
+    .catch(function(e) {
+      document.getElementById('sug-lista').innerHTML = '<div class="empty">Errore caricamento: ' + e.message + '</div>';
+    });
+}
+
+function renderLista() {
+  var lista = document.getElementById('sug-lista');
+  document.getElementById('sug-count').textContent = suggerimenti.length + ' suggeriment' + (suggerimenti.length === 1 ? 'o' : 'i');
+  if (!suggerimenti.length) {
+    lista.innerHTML = '<div class="empty">Nessun suggerimento ancora.</div>';
+    return;
+  }
+  lista.innerHTML = suggerimenti.map(function(s) {
+    var cat = CATEGORIE[s.categoria] || CATEGORIE.altro;
+    var pri = PRIORITA[s.priorita] || PRIORITA.normale;
+    return '<div class="sug-item">' +
+      '<button class="sug-delete" onclick="elimina(\'' + s.id + '\')">✕</button>' +
+      '<div class="sug-meta">' +
+        '<span class="sug-nome">' + (s.nome||'') + '</span>' +
+        (s.ruolo ? '<span style="font-size:12px;color:var(--gray);">· ' + s.ruolo + '</span>' : '') +
+        '<span class="tag ' + cat.cls + '">' + cat.label + '</span>' +
+        (s.priorita === 'alta' ? '<span class="tag tag-alta">' + pri.label + '</span>' : '') +
+        '<span class="sug-data">' + (s.data||'') + ' · ' + (s.ora||'') + '</span>' +
+      '</div>' +
+      '<div class="sug-testo">' + (s.messaggio||'').replace(/\n/g,'<br>') + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function elimina(id) {
+  if (!confirm('Eliminare?')) return;
+  window.db.collection('suggerimenti-royalties').doc(id).delete().then(ricarica);
+}
+
+function svuotaTutto() {
+  if (!suggerimenti.length) return;
+  if (!confirm('Eliminare tutti i ' + suggerimenti.length + ' suggerimenti da Firebase?')) return;
+  var batch = window.db.batch();
+  suggerimenti.forEach(function(s) {
+    batch.delete(window.db.collection('suggerimenti-royalties').doc(s.id));
+  });
+  batch.commit().then(ricarica);
+}
+
+function scaricaWord() {
+  if (!suggerimenti.length) { alert('Nessun suggerimento.'); return; }
+  var btn = document.getElementById('btn-word');
+  btn.textContent = 'Generando...';
+  btn.disabled = true;
+  var docx = window.docx;
+  var children = [];
+  children.push(new docx.Paragraph({children:[new docx.TextRun({text:'HOM ROYALTY MANAGER',bold:true,size:36,font:'Arial'})],spacing:{after:60}}));
+  children.push(new docx.Paragraph({children:[new docx.TextRun({text:'REPORT SUGGERIMENTI',bold:true,size:28,font:'Arial',color:'8B6914'})],spacing:{after:120}}));
+  children.push(new docx.Paragraph({
+    children:[new docx.TextRun({text:'Generato il ' + new Date().toLocaleDateString('it-IT') + ' — Totale: ' + suggerimenti.length + ' suggerimenti',size:18,font:'Arial',color:'666666'})],
+    border:{bottom:{style:docx.BorderStyle.SINGLE,size:6,color:'C8A96E',space:8}},
+    spacing:{after:320}
+  }));
+  suggerimenti.forEach(function(s,i) {
+    var cat = CATEGORIE[s.categoria] || CATEGORIE.altro;
+    children.push(new docx.Paragraph({
+      children:[
+        new docx.TextRun({text:(i+1)+'. ',bold:true,size:22,font:'Arial',color:'C8A96E'}),
+        new docx.TextRun({text:s.nome||'',bold:true,size:22,font:'Arial'}),
+        s.ruolo ? new docx.TextRun({text:' · '+s.ruolo,size:20,font:'Arial',color:'888888'}) : new docx.TextRun({text:''})
+      ],spacing:{before:200,after:60}
+    }));
+    children.push(new docx.Paragraph({
+      children:[
+        new docx.TextRun({text:cat.label,size:18,font:'Arial',bold:true,color:'666666'}),
+        s.priorita==='alta' ? new docx.TextRun({text:'  |  ALTA PRIORITÀ',size:18,font:'Arial',color:'C94F3A'}) : new docx.TextRun({text:''}),
+        new docx.TextRun({text:'  |  '+(s.data||'')+' '+(s.ora||''),size:16,font:'Arial',color:'999999'})
+      ],spacing:{after:80}
+    }));
+    (s.messaggio||'').split('\n').forEach(function(riga,ri,arr) {
+      children.push(new docx.Paragraph({children:[new docx.TextRun({text:riga,size:20,font:'Arial'})],spacing:ri===arr.length-1?{after:40}:{after:0},indent:{left:360}}));
+    });
+    if (i < suggerimenti.length-1) {
+      children.push(new docx.Paragraph({children:[new docx.TextRun({text:''})],border:{bottom:{style:docx.BorderStyle.SINGLE,size:1,color:'DDDDDD',space:6}},spacing:{before:120,after:120}}));
+    }
+  });
+  children.push(new docx.Paragraph({
+    children:[new docx.TextRun({text:'House of Music S.r.l. · Viale Tunisia 39, 20124 Milano · www.houseofmusic.it',size:16,font:'Arial',color:'AAAAAA'})],
+    border:{top:{style:docx.BorderStyle.SINGLE,size:4,color:'C8A96E',space:8}},
+    spacing:{before:400}
+  }));
+  var doc = new docx.Document({sections:[{properties:{page:{size:{width:11906,height:16838},margin:{top:1440,right:1440,bottom:1440,left:1440}}},children:children}]});
+  docx.Packer.toBlob(doc).then(function(blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'HOM-Suggerimenti-' + new Date().toISOString().substring(0,10) + '.docx';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    btn.textContent = '📄 Scarica Word';
+    btn.disabled = false;
+  });
+}
+
+ricarica();
+</script>
+</body>
+</html>

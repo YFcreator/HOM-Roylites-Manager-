@@ -6,6 +6,23 @@
 <title>HOM — Royalty Manager</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script>
+try {
+  firebase.initializeApp({
+    apiKey: "AIzaSyCYU0IVxNt6LYB9U8aIhRzEG-ps8Z3mx7A",
+    authDomain: "hom-linkedin.firebaseapp.com",
+    projectId: "hom-linkedin",
+    storageBucket: "hom-linkedin.firebasestorage.app",
+    messagingSenderId: "280456987425",
+    appId: "1:280456987425:web:dc9c386dc9463681983460"
+  });
+  window.db = firebase.firestore();
+} catch(e) {
+  window.db = null;
+}
+</script>
 <style>
 :root {
   --black: #0a0a0a;
@@ -460,6 +477,10 @@ tbody tr:hover td { background:rgba(255,255,255,0.02); }
     <span class="nav-icon">⚙️</span>
     <span>Impostazioni</span>
   </div>
+  <div class="nav-item" onclick="window.open('suggerimenti.html','_blank')">
+    <span class="nav-icon">💬</span>
+    <span>Suggerimenti</span>
+  </div>
 </aside>
 
 <!-- MAIN -->
@@ -827,6 +848,126 @@ tbody tr:hover td { background:rgba(255,255,255,0.02); }
   </div>
 </div>
 
+<!-- SUGGERIMENTI -->
+<div class="view" id="view-suggerimenti">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Suggerimenti</div>
+      <div class="page-sub">Invia feedback e richieste di modifica al team HOM</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-title">💬 Invia un Suggerimento</div>
+      <p style="font-size:13px;color:var(--gray-light);margin-bottom:20px;">I suggerimenti vengono inviati direttamente a <b style="color:var(--gold)">yf@homrecords.com</b>.</p>
+
+      <form action="https://formspree.io/f/xpwzgqkb" method="POST" onsubmit="handleSuggerimento(event)">
+        <input type="hidden" name="_subject" value="Suggerimento HOM Royalty Manager">
+        <input type="hidden" name="_replyto" id="sug-email-hidden">
+
+        <div class="field">
+          <label>Il tuo nome *</label>
+          <input type="text" name="nome" id="sug-nome" placeholder="Es: Marco Rossi" required>
+        </div>
+        <div class="field">
+          <label>La tua email</label>
+          <input type="email" name="email" id="sug-email" placeholder="tua@email.com" oninput="document.getElementById('sug-email-hidden').value=this.value">
+        </div>
+        <div class="field">
+          <label>Categoria</label>
+          <select name="categoria" id="sug-categoria">
+            <option value="Bug / Errore">🐛 Bug / Errore</option>
+            <option value="Nuova funzione">✦ Nuova funzione</option>
+            <option value="Miglioramento">🔧 Miglioramento esistente</option>
+            <option value="Contratto / Calcoli">📄 Contratto / Calcoli</option>
+            <option value="Rendiconto / PDF">🖨️ Rendiconto / PDF</option>
+            <option value="Altro">💬 Altro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Priorità</label>
+          <select name="priorita">
+            <option value="Normale">Normale</option>
+            <option value="Alta">🔴 Alta — blocca il lavoro</option>
+            <option value="Bassa">Bassa — quando possibile</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Descrizione *</label>
+          <textarea name="messaggio" id="sug-messaggio" style="min-height:120px;resize:vertical;" placeholder="Descrivi il suggerimento o il problema nel dettaglio..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" id="sug-btn" style="width:100%;justify-content:center;padding:14px;">
+          ✦ Invia Suggerimento
+        </button>
+        <div id="sug-status" style="margin-top:12px;font-size:13px;text-align:center;"></div>
+      </form>
+    </div>
+
+    <div>
+      <div class="card" style="background:rgba(200,169,110,0.05);border-color:rgba(200,169,110,0.2);">
+        <div class="card-title">📬 Come funziona</div>
+        <div style="font-size:13px;color:var(--gray-light);line-height:1.8;">
+          <div style="margin-bottom:12px;">1. Compila il form con nome, categoria e descrizione</div>
+          <div style="margin-bottom:12px;">2. Il suggerimento arriva via email a <b style="color:var(--gold)">yf@homrecords.com</b></div>
+          <div style="margin-bottom:12px;">3. Il team valuta e implementa le modifiche</div>
+          <div>4. L'app viene aggiornata con le nuove funzionalità</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:0;">
+        <div class="card-title">📋 Suggerimenti Recenti Inviati</div>
+        <div id="sug-storico">
+          <div style="color:var(--gray);font-size:13px;font-style:italic;">Nessun suggerimento inviato da questo dispositivo</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SUGGERIMENTI -->
+<div class="view" id="view-suggerimenti">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Suggerimenti</div>
+      <div class="page-sub">Invia feedback e richieste di miglioramento</div>
+    </div>
+  </div>
+  <div style="max-width:560px;">
+    <div class="card">
+      <div class="card-title">💬 Invia un Suggerimento</div>
+      <p style="font-size:13px;color:var(--gray-light);margin-bottom:20px;">Il tuo suggerimento viene salvato e il team lo valuterà.</p>
+      <div class="grid-2">
+        <div class="field"><label>Il tuo nome *</label><input type="text" id="sug-nome" placeholder="Es: Marco Rossi"></div>
+        <div class="field"><label>Ruolo / Team</label><input type="text" id="sug-ruolo" placeholder="Es: A&R, Label Manager..."></div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Categoria</label>
+          <select id="sug-categoria">
+            <option value="feature">✦ Nuova funzione</option>
+            <option value="bug">🐛 Bug / Errore</option>
+            <option value="miglioramento">🔧 Miglioramento</option>
+            <option value="contratto">📄 Contratto / Calcoli</option>
+            <option value="rendiconto">🖨️ Rendiconto / PDF</option>
+            <option value="altro">💬 Altro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Priorità</label>
+          <select id="sug-priorita">
+            <option value="normale">Normale</option>
+            <option value="alta">🔴 Alta — urgente</option>
+            <option value="bassa">Bassa — quando possibile</option>
+          </select>
+        </div>
+      </div>
+      <div class="field"><label>Descrizione *</label><textarea id="sug-messaggio" style="min-height:120px;" placeholder="Descrivi nel dettaglio il suggerimento o il problema..."></textarea></div>
+      <button class="btn btn-primary" id="sug-send-btn" onclick="inviaSuggerimento()" style="width:100%;justify-content:center;padding:14px;">✦ Invia</button>
+    </div>
+  </div>
+</div>
+
 </main>
 
 <!-- AREA STAMPA (nascosta) -->
@@ -906,6 +1047,8 @@ function showView(name) {
   if (name === 'import') populateSelect('map-contratto');
   if (name === 'impostazioni') caricaImpostazioni();
   if (name === 'nuovo-contratto') { if (!editingId) resetForm(); }
+  if (name === 'suggerimenti') { /* form pulito */ }
+  if (name === 'suggerimenti') renderSuggerimenti();
 }
 
 function chiudiModal(id) {
@@ -1544,6 +1687,77 @@ function salvaImpostazioni() {
 }
 
 // ============================================================
+// SUGGERIMENTI
+// ============================================================
+var suggerimenti = JSON.parse(localStorage.getItem('hom_roy_sug') || '[]');
+
+function handleSuggerimento(e) {
+  e.preventDefault();
+  var btn = document.getElementById('sug-btn');
+  var status = document.getElementById('sug-status');
+  var nome = document.getElementById('sug-nome').value.trim();
+  var messaggio = document.getElementById('sug-messaggio').value.trim();
+  var categoria = document.getElementById('sug-categoria').value;
+
+  btn.disabled = true;
+  btn.textContent = 'Invio in corso...';
+  status.textContent = '';
+
+  var form = e.target;
+  var data = new FormData(form);
+
+  fetch('https://formspree.io/f/xpwzgqkb', {
+    method: 'POST',
+    body: data,
+    headers: { 'Accept': 'application/json' }
+  }).then(function(res) {
+    if (res.ok) {
+      // Salva nello storico locale
+      suggerimenti.unshift({
+        nome: nome,
+        categoria: categoria,
+        messaggio: messaggio.substring(0, 100) + (messaggio.length > 100 ? '...' : ''),
+        data: new Date().toLocaleDateString('it-IT'),
+        ora: new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'})
+      });
+      localStorage.setItem('hom_roy_sug', JSON.stringify(suggerimenti.slice(0, 20)));
+
+      status.innerHTML = '<span style="color:#5aab7a;">✅ Suggerimento inviato a yf@homrecords.com!</span>';
+      form.reset();
+      renderSuggerimenti();
+    } else {
+      status.innerHTML = '<span style="color:var(--red);">❌ Errore invio — riprova o scrivi direttamente a yf@homrecords.com</span>';
+    }
+    btn.disabled = false;
+    btn.textContent = '✦ Invia Suggerimento';
+  }).catch(function() {
+    status.innerHTML = '<span style="color:var(--red);">❌ Connessione assente — riprova più tardi</span>';
+    btn.disabled = false;
+    btn.textContent = '✦ Invia Suggerimento';
+  });
+}
+
+function renderSuggerimenti() {
+  var el = document.getElementById('sug-storico');
+  if (!el) return;
+  if (!suggerimenti.length) {
+    el.innerHTML = '<div style="color:var(--gray);font-size:13px;font-style:italic;">Nessun suggerimento inviato da questo dispositivo</div>';
+    return;
+  }
+  el.innerHTML = suggerimenti.slice(0, 5).map(function(s) {
+    return '<div style="padding:10px 0;border-bottom:1px solid var(--border);">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:4px;">' +
+        '<span style="font-size:12px;color:var(--gold);">' + s.categoria + '</span>' +
+        '<span style="font-family:DM Mono,monospace;font-size:10px;color:var(--gray);">' + s.data + ' · ' + s.ora + '</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--gray-light);">' + s.messaggio + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+window.handleSuggerimento = handleSuggerimento;
+
+// ============================================================
 // INIT
 // ============================================================
 function init() {
@@ -1571,6 +1785,52 @@ window.eliminaRendiconto = eliminaRendiconto;
 window.apriRendiconto = apriRendiconto;
 window.chiudiModal = chiudiModal;
 window.salvaImpostazioni = salvaImpostazioni;
+
+// ============================================================
+// SUGGERIMENTI → Firebase
+// ============================================================
+function inviaSuggerimento() {
+  var nome = document.getElementById('sug-nome').value.trim();
+  var messaggio = document.getElementById('sug-messaggio').value.trim();
+  if (!nome) { showToast('Inserisci il tuo nome', 'error'); return; }
+  if (!messaggio) { showToast('Inserisci la descrizione', 'error'); return; }
+
+  var btn = document.getElementById('sug-send-btn');
+  btn.disabled = true;
+  btn.textContent = 'Invio...';
+
+  var data = {
+    nome: nome,
+    ruolo: document.getElementById('sug-ruolo').value.trim(),
+    categoria: document.getElementById('sug-categoria').value,
+    priorita: document.getElementById('sug-priorita').value,
+    messaggio: messaggio,
+    ts: new Date().toISOString(),
+    data: new Date().toLocaleDateString('it-IT'),
+    ora: new Date().toLocaleTimeString('it-IT', {hour:'2-digit', minute:'2-digit'})
+  };
+
+  if (window.db) {
+    window.db.collection('suggerimenti-royalties').add(data).then(function() {
+      showToast('✅ Suggerimento inviato!', 'success');
+      document.getElementById('sug-nome').value = '';
+      document.getElementById('sug-ruolo').value = '';
+      document.getElementById('sug-messaggio').value = '';
+      btn.disabled = false;
+      btn.textContent = '✦ Invia';
+    }).catch(function(e) {
+      showToast('Errore invio: ' + e.message, 'error');
+      btn.disabled = false;
+      btn.textContent = '✦ Invia';
+    });
+  } else {
+    showToast('Firebase non disponibile', 'error');
+    btn.disabled = false;
+    btn.textContent = '✦ Invia';
+  }
+}
+
+window.inviaSuggerimento = inviaSuggerimento;
 
 init();
 </script>
